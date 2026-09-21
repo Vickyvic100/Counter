@@ -7,12 +7,17 @@ import com.example.data.*
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 
+enum class ScanEvent { SUCCESS, DUPLICATE, ERROR }
+
 class FoamViewModel(private val repository: FoamRepository) : ViewModel() {
 
     val batchSummaries = repository.batchSummaries
     
     private val _activeBatch = MutableStateFlow<Batch?>(null)
     val activeBatch = _activeBatch.asStateFlow()
+
+    private val _scanEvents = MutableSharedFlow<ScanEvent>()
+    val scanEvents = _scanEvents.asSharedFlow()
 
     private val _scanError = MutableSharedFlow<String>()
     val scanError = _scanError.asSharedFlow()
@@ -48,12 +53,16 @@ class FoamViewModel(private val repository: FoamRepository) : ViewModel() {
 
         val result = QRParser.parse(qrText)
         if (result == null) {
-            viewModelScope.launch { _scanError.emit("Invalid QR Code: Missing SKU or Code") }
+            viewModelScope.launch { 
+                _scanEvents.emit(ScanEvent.ERROR)
+                _scanError.emit("Invalid QR Code: Missing SKU or Code") 
+            }
             return
         }
 
         viewModelScope.launch {
             if (repository.isSkuScanned(batch.id, result.sku)) {
+                _scanEvents.emit(ScanEvent.DUPLICATE)
                 _scanError.emit("Duplicate Scan: This SKU has already been counted.")
             } else {
                 val scan = Scan(
@@ -63,6 +72,7 @@ class FoamViewModel(private val repository: FoamRepository) : ViewModel() {
                 )
                 repository.insertScan(scan)
                 _lastScan.value = scan
+                _scanEvents.emit(ScanEvent.SUCCESS)
             }
         }
     }

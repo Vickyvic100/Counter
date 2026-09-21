@@ -1,6 +1,13 @@
 package com.example.ui.screens
 
 import android.Manifest
+import android.content.Context
+import android.media.AudioManager
+import android.media.ToneGenerator
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
@@ -12,10 +19,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.FoamViewModel
+import com.example.ui.ScanEvent
 import com.example.ui.components.CameraPreview
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
@@ -30,6 +39,7 @@ fun ScanningScreen(
     onBack: () -> Unit,
     onViewResults: () -> Unit
 ) {
+    val context = LocalContext.current
     val activeBatch by viewModel.activeBatch.collectAsState()
     val totalScanned by (activeBatch?.id?.let { viewModel.getCount(it) } ?: flowOf(0)).collectAsState(initial = 0)
     val differentCodes by (activeBatch?.id?.let { viewModel.getDifferentCodesCount(it) } ?: flowOf(0)).collectAsState(initial = 0)
@@ -40,6 +50,39 @@ fun ScanningScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     
     var showSuccess by remember { mutableStateOf(false) }
+
+    // Audio and Haptic setup
+    val toneGenerator = remember { ToneGenerator(AudioManager.STREAM_NOTIFICATION, 100) }
+    val vibrator = remember {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val vibratorManager = context.getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
+            vibratorManager.defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.scanEvents.collect { event ->
+            when (event) {
+                ScanEvent.SUCCESS -> {
+                    toneGenerator.startTone(ToneGenerator.TONE_PROP_ACK, 150)
+                }
+                ScanEvent.DUPLICATE -> {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        vibrator.vibrate(VibrationEffect.createOneShot(500, VibrationEffect.DEFAULT_AMPLITUDE))
+                    } else {
+                        @Suppress("DEPRECATION")
+                        vibrator.vibrate(500)
+                    }
+                }
+                ScanEvent.ERROR -> {
+                    toneGenerator.startTone(ToneGenerator.TONE_PROP_NACK, 200)
+                }
+            }
+        }
+    }
 
     LaunchedEffect(viewModel.scanError) {
         viewModel.scanError.collect { error ->

@@ -1,5 +1,7 @@
 package com.example.ui.screens
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -38,6 +40,33 @@ fun SettingsScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     
     var showRestoreConfirm by remember { mutableStateOf(false) }
+
+    val filePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument(),
+        onResult = { uri ->
+            uri?.let {
+                scope.launch {
+                    try {
+                        val inputStream = context.contentResolver.openInputStream(it)
+                        val json = inputStream?.bufferedReader()?.use { reader -> reader.readText() }
+                        if (json != null) {
+                            val moshi = Moshi.Builder().addLast(KotlinJsonAdapterFactory()).build()
+                            val adapter = moshi.adapter(com.example.data.BackupData::class.java)
+                            val backupData = adapter.fromJson(json)
+                            if (backupData != null) {
+                                viewModel.restoreBackup(backupData)
+                                snackbarHostState.showSnackbar("Data restored successfully")
+                            } else {
+                                snackbarHostState.showSnackbar("Invalid backup file")
+                            }
+                        }
+                    } catch (e: Exception) {
+                        snackbarHostState.showSnackbar("Error restoring data: ${e.message}")
+                    }
+                }
+            }
+        }
+    )
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -112,7 +141,7 @@ fun SettingsScreen(
             confirmButton = {
                 TextButton(onClick = {
                     showRestoreConfirm = false
-                    // Restore logic would go here, involving a file picker
+                    filePickerLauncher.launch(arrayOf("application/json"))
                 }) {
                     Text("CHOOSE FILE")
                 }
