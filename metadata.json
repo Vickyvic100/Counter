@@ -1,0 +1,6 @@
+{
+  "name": "Hysam Foam Counter",
+  "description": "Offline foam and mattress stock auditing app with QR code scanning and CSV export.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

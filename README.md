@@ -1,11 +1,21 @@
-<div align="center">
+# Hysam Foam Counter
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+Offline physical stock-counting and auditing application for foam/mattress products.
 
-  <h1>Built with AI Studio</h2>
+## How to Download the APK
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+Every time a change is pushed to this repository, a new APK is automatically built using GitHub Actions.
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+1. Click on the **Actions** tab at the top of this GitHub repository.
+2. Click on the most recent workflow run (usually named "Build Android APK").
+3. Scroll down to the **Artifacts** section at the bottom of the page.
+4. Click on **HysamFoamCounter-Debug** to download the ZIP file containing the APK.
+5. Extract the ZIP and install the `.apk` file on your Android device.
 
-</div>
+## Features
+
+- **100% Offline**: No internet required for scanning or counting.
+- **QR Code Scanning**: Scans SKU and Code from product JSON.
+- **Duplicate Protection**: Prevents counting the same SKU twice in a batch.
+- **Local Persistence**: All data stored in an on-device SQLite database.
+- **Export**: Generate CSV reports and share via Android share sheet.
